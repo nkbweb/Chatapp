@@ -1,0 +1,105 @@
+<!-- app/templates/chat.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - WhatsApp Clone{% endblock %}
+
+{% block content %}
+    <div class="chat-container">
+        <div class="chat-header">
+            <a href="{{ url_for('chat.home') }}" class="back-button">
+                <span>&larr;</span>
+            </a>
+            <div class="chat-avatar">{{ other_user.username[0] }}</div>
+            <div class="chat-info">
+                <div class="chat-name">{{ other_user.username }}</div>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message {{ 'sent' if message.sender_id == current_user.id else 'received' }}">
+                        <div class="message-content">{{ message.content }}</div>
+                        <div class="message-time">{{ message.timestamp.strftime('%H:%M | %d %b') }}</div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-messages">
+                    <p>No messages yet. Start the conversation!</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="chat-input">
+            <form id="message-form" action="{{ url_for('message.send_message', chat_id=chat.id) }}" method="post">
+                <input type="text" id="message-content" name="content" placeholder="Type a message" required>
+                <button type="submit" id="send-button">Send</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        const chatId = {{ chat.id }};
+        let lastMessageId = {{ messages[-1].id if messages else 0 }};
+        
+        // Scroll to bottom of chat
+        function scrollToBottom() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Initial scroll
+        scrollToBottom();
+        
+        // Submit form via AJAX
+        $('#message-form').submit(function(e) {
+            e.preventDefault();
+            
+            const content = $('#message-content').val();
+            if (!content.trim()) return;
+            
+            $.ajax({
+                type: 'POST',
+                url: $(this).attr('action'),
+                data: $(this).serialize(),
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(data) {
+                    $('#message-content').val('');
+                }
+            });
+        });
+        
+        // Poll for new messages
+        function getNewMessages() {
+            $.ajax({
+                type: 'GET',
+                url: `/get_messages/${chatId}`,
+                data: { last_id: lastMessageId },
+                success: function(data) {
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(function(msg) {
+                            const messageClass = msg.is_sent_by_me ? 'sent' : 'received';
+                            const messageHtml = `
+                                <div class="message ${messageClass}">
+                                    <div class="message-content">${msg.content}</div>
+                                    <div class="message-time">${msg.timestamp}</div>
+                                </div>
+                            `;
+                            $('#chat-messages').append(messageHtml);
+                            lastMessageId = msg.id;
+                        });
+                        
+                        scrollToBottom();
+                    }
+                }
+            });
+        }
+        
+        // Poll every 3 seconds
+        setInterval(getNewMessages, 3000);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!-- app/templates/home.html -->
+{% extends "base.html" %}
+
+{% block title %}Home - WhatsApp Clone{% endblock %}
+
+{% block content %}
+    <div class="home-container">
+        <div class="sidebar">
+            <div class="search-container">
+                <input type="text" id="search-chats" placeholder="Search chats...">
+            </div>
+            
+            <div class="chat-list">
+                <h3>Recent Chats</h3>
+                {% if chats %}
+                    {% for chat in chats %}
+                        {% set other_user = chat.get_other_user(current_user.id) %}
+                        {% set last_message = chat.get_last_message() %}
+                        <div class="chat-item">
+                            <a href="{{ url_for('chat.view_chat', chat_id=chat.id) }}">
+                                <div class="chat-avatar">{{ other_user.username[0] }}</div>
+                                <div class="chat-details">
+                                    <div class="chat-name">{{ other_user.username }}</div>
+                                    <div class="chat-last-message">
+                                        {% if last_message %}
+                                            {{ last_message.content|truncate(30) }}
+                                        {% else %}
+                                            No messages yet
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="padding-bottom: 10px;">No chats yet. Start a new conversation!</p>
+                {% endif %}
+            </div>
+            
+            <div class="user-list">
+                <h3>Available Users</h3>
+                {% if users %}
+                    {% for user in users %}
+                        <div class="user-item">
+                            <a href="{{ url_for('chat.create_chat', user_id=user.id) }}">
+                                <div class="user-avatar">{{ user.username[0] }}</div>
+                                <div class="user-name">{{ user.username }}</div>
+                            </a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No other users found.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="welcome">
+            <h2>Welcome to WhatsApp Clone</h2>
+            <p>Select a chat to start messaging or start a new conversation with an available user.</p>
+        </div>
+    </div>
+{% endblock %}
